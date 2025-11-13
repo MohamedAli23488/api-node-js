@@ -1,6 +1,8 @@
 // tests/api.spec.ts
 import {test, expect} from '@playwright/test';
 import {StatusCodes} from "http-status-codes";
+import {clearAllUsers, createTwoUsers, getAllUserIds} from "./helpers";
+
 
 let baseURL: string = 'http://localhost:3000/users';
 
@@ -54,36 +56,32 @@ test.describe('User management API', () => {
 });
 
 test.describe('User management API 2', () => {
-    let userIDs: string[] = [];
+    let userIds: string[] = []; // to be used in both tests
     test.beforeEach(async ({request}) => {
-        userIDs = [];// for clearing old ID before each test
-        const response = await request.post(`${baseURL}`);
-        const response1 = await request.post(`${baseURL}`);
-        const responseAllUsers = await request.get(`${baseURL}`);
-        const responseUsers = await responseAllUsers.json()
-        const numberOfobjects = responseUsers.length;
-        console.log('number of users ' + numberOfobjects);
-        for (let i = 0; i < numberOfobjects; i++) {
-            let userID = responseUsers[i].id;
-            userIDs.push(userID);
-        }
+        await clearAllUsers(request, baseURL);
+        await createTwoUsers(request, baseURL);
+        userIds = await getAllUserIds(request, baseURL);
     });
+
     test('Delete all users ID  after getting their information', async ({request}) => {
-        for (let i = 0; i < userIDs.length; i++) {
-            let deletedresponse = await request.delete(`${baseURL}/${userIDs[i]}`);
-            expect(deletedresponse.status()).toBe(StatusCodes.OK);
+        for (let i = 0; i < userIds.length; i++) {
+            let deletedResponse = await request.delete(`${baseURL}/${userIds[i]}`);
+            expect(deletedResponse.status()).toBe(StatusCodes.OK);
         }
-        console.log(userIDs);
+        console.log(userIds);
         const responseAfterDelete = await request.get(`${baseURL}`);
         const usersAfterDelete = await responseAfterDelete.json();
         expect(usersAfterDelete.length).toBe(0);
+        const usersAfterDelete1 = await responseAfterDelete.text();
+        expect(usersAfterDelete1).toBe('[]');
     });
+
     test('Delete all users ID except last user', async ({request}) => {
-        for (let i = 0; i < userIDs.length - 1; i++) {
-            let deletedresponse = await request.delete(`${baseURL}/${userIDs[i]}`);
-            expect(deletedresponse.status()).toBe(StatusCodes.OK);
+        for (let i = 0; i < userIds.length - 1; i++) {
+            let deletedResponse = await request.delete(`${baseURL}/${userIds[i]}`);
+            expect(deletedResponse.status()).toBe(StatusCodes.OK);
         }
-        console.log(userIDs);
+        console.log(userIds);
         const responseAfterDelete = await request.get(`${baseURL}`);
         const usersAfterDelete = await responseAfterDelete.json();
         expect(usersAfterDelete.length).toBe(1);
